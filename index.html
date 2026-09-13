@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>深白专属鉴定小屋 · 辰宇认证</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang SC","Microsoft YaHei",sans-serif;
+    background: linear-gradient(160deg,#fff0f5 0%,#ffe6f0 35%,#f3e8ff 70%,#e8f4ff 100%);
+    color:#5a3a4a; min-height:100vh; overflow-x:hidden;
+  }
+  .page { display:none; min-height:100vh; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; position:relative; z-index:2; }
+  .page.active { display:flex; }
+  h1 { font-size:clamp(26px,6vw,50px); letter-spacing:2px; margin-bottom:10px; color:#d14d7e; }
+  .sub { color:#b08090; font-size:14px; margin-bottom:34px; }
+
+  /* ---------- Loading ---------- */
+  .badge { width:104px; height:104px; border-radius:50%; background:#fff; border:3px dashed #ff9ec3; display:flex; align-items:center; justify-content:center; font-size:44px; margin-bottom:26px; animation:pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,158,195,.45); transform:scale(1);} 50%{ box-shadow:0 0 0 16px rgba(255,158,195,0); transform:scale(1.06);} }
+  .bar-wrap { width:min(420px,80vw); height:16px; background:#fff; border-radius:99px; overflow:hidden; border:2px solid #ffb7d2; }
+  .bar { height:100%; width:0%; background:linear-gradient(90deg,#ff9ec3,#c9a7ff,#8ecbff); border-radius:99px; transition:width .35s ease; }
+  .load-tip { margin-top:16px; font-size:13px; color:#c08095; min-height:20px; }
+
+  /* ---------- Quiz ---------- */
+  .card { background:#fff; border:2px solid #ffd3e3; border-radius:28px; padding:34px 26px; width:min(580px,92vw); box-shadow:0 14px 40px rgba(209,77,126,.15); }
+  .q-num { font-size:12px; color:#d18aa5; letter-spacing:3px; margin-bottom:10px; }
+  .q-text { font-size:clamp(17px,4.5vw,23px); font-weight:700; margin-bottom:24px; line-height:1.5; color:#6b4256; }
+  .opt { display:block; width:100%; margin:11px 0; padding:14px 18px; font-size:15.5px; border-radius:18px; border:2px solid #ffd9e6; background:#fff7fa; color:#7a4a5e; cursor:pointer; transition:.2s; text-align:left; }
+  .opt:hover { background:#ffeef5; border-color:#ff9ec3; transform:translateY(-2px); }
+
+  /* ---------- Verdict ---------- */
+  .stamp {
+    display:inline-block; margin-top:20px; padding:12px 28px; border:4px solid #ff6b9d; color:#ff6b9d; background:#fff;
+    font-size:clamp(26px,7vw,46px); font-weight:900; border-radius:18px; transform:rotate(-6deg);
+    letter-spacing:5px; animation:stampIn .5s cubic-bezier(.2,2.2,.4,1) 1s both; box-shadow:0 6px 0 rgba(255,107,157,.25);
+  }
+  @keyframes stampIn { 0%{ transform:rotate(-6deg) scale(3); opacity:0;} 60%{ opacity:1;} 100%{ transform:rotate(-6deg) scale(1); opacity:1;} }
+  .verdict-line { font-size:clamp(19px,5vw,29px); font-weight:800; min-height:40px; color:#c2457a; }
+  .cursor { display:inline-block; animation:blink .7s steps(1) infinite; color:#ff9ec3; }
+  @keyframes blink { 50%{opacity:0;} }
+  .score { margin-top:16px; color:#b08090; font-size:14px; line-height:1.8; }
+  .btn-row { display:flex; gap:14px; margin-top:32px; flex-wrap:wrap; justify-content:center; }
+  .btn { padding:14px 30px; border-radius:99px; font-size:16px; font-weight:700; border:none; cursor:pointer; transition:.2s; }
+  .btn-main { background:linear-gradient(90deg,#ff9ec3,#c9a7ff); color:#fff; box-shadow:0 8px 22px rgba(255,158,195,.45); }
+  .btn-main:hover { transform:translateY(-2px); box-shadow:0 12px 30px rgba(255,158,195,.6); }
+  .btn-ghost { background:#fff; color:#c08095; border:2px solid #ffd3e3; }
+  #deny { position:relative; }
+
+  .footer-note { position:fixed; bottom:12px; width:100%; text-align:center; font-size:11px; color:#d9a8ba; z-index:2; }
+  canvas#confetti { position:fixed; inset:0; pointer-events:none; z-index:5; }
+  .float-b { position:fixed; opacity:.35; z-index:1; animation:drift linear infinite; pointer-events:none; }
+  @keyframes drift { from{ transform:translateY(105vh) rotate(0deg);} to{ transform:translateY(-15vh) rotate(360deg);} }
+  .toast { position:fixed; top:20px; left:50%; transform:translate(-50%,-90px); background:#fff; border:2px solid #ff9ec3; color:#c2457a; padding:12px 22px; border-radius:99px; font-size:14px; transition:.4s; z-index:9; box-shadow:0 8px 24px rgba(255,158,195,.35); }
+  .toast.show { transform:translate(-50%,0); }
+</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+
+<!-- PAGE 1: LOADING -->
+<div class="page active" id="p1">
+  <div class="badge">🧸</div>
+  <h1>深白专属鉴定小屋</h1>
+  <p class="sub">鉴定人：辰宇 · 全程科学（并不）· 结果权威（确实）</p>
+  <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+  <p class="load-tip" id="tip">正在接入深白的小脑袋…</p>
+</div>
+
+<!-- PAGE 2: QUIZ -->
+<div class="page" id="p2">
+  <div class="card">
+    <div class="q-num" id="qNum">第 1 题 / 共 8 题</div>
+    <div class="q-text" id="qText"></div>
+    <div id="opts"></div>
+  </div>
+</div>
+
+<!-- PAGE 3: VERDICT -->
+<div class="page" id="p3">
+  <div class="verdict-line"><span id="typeTarget"></span><span class="cursor">▌</span></div>
+  <div><span class="stamp">笨蛋认证 ✅</span></div>
+  <p class="score" id="scoreLine"></p>
+  <div class="btn-row">
+    <button class="btn btn-main" onclick="copyVerdict()">📋 复制鉴定结论</button>
+    <button class="btn btn-ghost" id="deny" onmouseover="dodge()" ontouchstart="dodge()">我不是笨蛋</button>
+  </div>
+</div>
+
+<div class="footer-note">鉴定人：辰宇 · 被鉴定人：深白（aka SB · 亲亲宝宝）· 结果终身有效 © 2026</div>
+<div class="toast" id="toast">已复制！快去发给深白 🎀</div>
+
+<script>
+/* floating cute background */
+const emo=['🌸','💗','✨','🎀','🧸','💫','🍬','🌷'];
+for (let i=0;i<16;i++){
+  const s=document.createElement('span');
+  s.className='float-b'; s.textContent=emo[i%emo.length];
+  s.style.left=Math.random()*100+'vw';
+  s.style.animationDuration=(14+Math.random()*18)+'s';
+  s.style.animationDelay=(-Math.random()*20)+'s';
+  s.style.fontSize=(14+Math.random()*24)+'px';
+  document.body.appendChild(s);
+}
+
+/* ---------- loading ---------- */
+const tips=['正在接入深白的小脑袋…','正在扫描脑细胞库存…','警告：库存为空，仅找到一包棉花糖','正在确认仪器没坏…','检测结果过于明显，跳过复核…','鉴定完成 ✔ 辰宇亲笔签发'];
+let prog=0,ti=0;
+const bar=document.getElementById('bar'),tip=document.getElementById('tip');
+const lt=setInterval(()=>{
+  prog+=Math.random()*8+4;
+  if(prog>=100){prog=100;clearInterval(lt);setTimeout(()=>show('p2'),600);}
+  bar.style.width=prog+'%';
+  const n=Math.min(tips.length-1,Math.floor(prog/18));
+  if(n!==ti){ti=n;tip.textContent=tips[n];}
+},380);
+
+/* ---------- quiz ---------- */
+const qs=[
+ {q:'第 1 题热身：1 + 1 等于几？',o:['2','3','需要拿手指确认一下','1+1 是什么，能吃吗']},
+ {q:'看到镜子里的自己，深白通常会？',o:['正常照镜子','被自己可爱到','问镜子：你谁？','跟镜子商量谁更笨（镜子输了）']},
+ {q:'重大考点：「SB」这两个字母的正确含义是？',o:['深白的名字缩写（但读起来怎么怪怪的）','Super Brain（她自己以为的）','Sweet Baby（辰宇心情好的时候）','以上三种，视场合随机切换']},
+ {q:'当辰宇突然叫你「亲亲宝宝」时，你的内心是？',o:['表面嫌弃，内心暗爽','他又想整蛊我！','他吃错药了？？','再多叫几声也不是不行']},
+ {q:'深白最大的优点是？',o:['是深白','是 SB（名字缩写那种，别多想）','被辰宇官方认证过','本题纯送分，选哪个都对']},
+ {q:'如果深白和辰宇同时饿肚子，应该先喂谁？',o:['先喂深白，吃饱了才笨得可爱','先喂辰宇，他还要写代码养…养网站','同时喂，一碗水端平','喂棉花糖就行，反正库存里只有那个']},
+ {q:'深白的聪明程度处于什么水平？',o:['聪明到仪器测不出来','仪器直接爆表（笨的方向）','智商和棉花糖甜度成正比','别测了，给孩子留条底裤']},
+ {q:'最终确认：以下哪个称呼最适合深白？',o:['大笨蛋','亲亲宝宝大笨蛋','SB（名字缩写）大笨蛋','以上全部，终身绑定']}
+];
+let qi=0;
+function renderQ(){
+  document.getElementById('qNum').textContent=`第 ${qi+1} 题 / 共 ${qs.length} 题`;
+  document.getElementById('qText').textContent=qs[qi].q;
+  const box=document.getElementById('opts'); box.innerHTML='';
+  qs[qi].o.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='opt'; b.textContent=t;
+    b.onclick=()=>{ qi++; qi<qs.length?renderQ():verdict(); };
+    box.appendChild(b);
+  });
+}
+renderQ();
+
+/* ---------- verdict ---------- */
+function show(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+
+const lines=['经辰宇亲自鉴定：','深白是宇宙限定款','亲亲宝宝牌大笨蛋！'];
+function verdict(){
+  show('p3');
+  const el=document.getElementById('typeTarget');
+  let li=0,ci=0;
+  (function type(){
+    if(li>=lines.length){
+      document.getElementById('scoreLine').innerHTML='智商评分：∞（笨蛋领域一骑绝尘）<br>鉴定人：辰宇 · 被鉴定人：深白（aka SB / 亲亲宝宝）<br>本结果终身有效，不接受上诉 🎀';
+      launchConfetti(); setTimeout(launchConfetti,700);
+      return;
+    }
+    el.textContent=lines.slice(0,li).join('')+lines[li].slice(0,++ci);
+    if(ci>=lines[li].length){li++;ci=0;setTimeout(type,420);}
+    else setTimeout(type,100);
+  })();
+}
+
+/* ---------- copy ---------- */
+function copyVerdict(){
+  const t='【深白专属鉴定小屋】经辰宇亲自鉴定：深白是宇宙限定款亲亲宝宝牌大笨蛋！又名 SB（名字缩写，官方认证）。本结果终身有效，不接受上诉。';
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{});
+  const toast=document.getElementById('toast');
+  toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),2200);
+}
+
+/* ---------- dodging button ---------- */
+let dodges=0;
+function dodge(){
+  const b=document.getElementById('deny');
+  const w=window.innerWidth,h=window.innerHeight;
+  b.style.position='fixed';
+  b.style.left=Math.random()*(w-140)+'px';
+  b.style.top=Math.random()*(h-60)+'px';
+  b.style.zIndex=8;
+  dodges++;
+  if(dodges>=6){b.textContent='你抓不到我 😝';b.style.borderColor='#c9a7ff';b.style.color='#a78bfa';}
+  if(dodges>=12){b.textContent='算了，承认吧';b.style.position='relative';b.style.left='';b.style.top='';b.onclick=()=>{b.textContent='对，我就是大笨蛋 🎀';b.style.borderColor='#ff6b9d';b.style.color='#ff6b9d';launchConfetti();};}
+}
+
+/* ---------- confetti ---------- */
+const cv=document.getElementById('confetti'),ctx=cv.getContext('2d');
+function fit(){cv.width=innerWidth;cv.height=innerHeight;}
+fit(); addEventListener('resize',fit);
+let parts=[],raf=null;
+function launchConfetti(){
+  const colors=['#ff9ec3','#c9a7ff','#8ecbff','#ffd36b','#9be8b0','#ff8a8a'];
+  for(let i=0;i<150;i++)parts.push({x:Math.random()*cv.width,y:-20-Math.random()*200,w:6+Math.random()*7,h:8+Math.random()*10,c:colors[i%colors.length],vy:2+Math.random()*3.5,vx:-1.5+Math.random()*3,r:Math.random()*Math.PI,vr:-.12+Math.random()*.24});
+  if(!raf)tick();
+}
+function tick(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  parts=parts.filter(p=>p.y<cv.height+30);
+  parts.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.r+=p.vr;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});
+  raf=parts.length?requestAnimationFrame(tick):null;
+}
+</script>
+</body>
+</html>
